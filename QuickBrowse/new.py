@@ -27,12 +27,6 @@ def on_press(show, key):
         with show.get_lock():
             show.value = True
 
-def on_press_mid(show, key):
-    print(key)
-    if kb.Listener.canonical(key) == kb.Key.alt_l and kb:
-        with show.get_lock():
-            show.value = True
-
 def switch(show):
     with kb.Listener(on_press=lambda k: on_press(show, k)) as listener:
         listener.join()
@@ -67,6 +61,7 @@ class KeyPressEvent(QtCore.QObject):
         if event.key() == QtCore.Qt.Key.Key_Escape:
             print("Escape")
             self.close()
+            self.widget.show = False
 
     def close(self):
         self.widget.showMinimized()
@@ -74,6 +69,7 @@ class KeyPressEvent(QtCore.QObject):
 class MyLineEdit(QtWidgets.QLineEdit):
     def __init__(self, parent=None):
         super(MyLineEdit, self).__init__(parent)
+        self.hide()
 
     def setUrlWidget(self, widget):
         self.urlWidget = widget
@@ -98,17 +94,24 @@ class Dialog(QtWidgets.QDialog):
         self.KeyPress.keyPressEvent(event)
 
 class TextEditor(QtWidgets.QWidget):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent):
+        super().__init__(parent=parent)
+
+        screen = QtWidgets.QApplication.primaryScreen().availableGeometry()
+
 
         self.text_edit = QtWidgets.QTextEdit(self)
         self.open_button = QtWidgets.QPushButton('Open', self)
         self.save_button = QtWidgets.QPushButton('Save', self)
+        """self.open_button.setWindowOpacity(1)
+        self.save_button.setWindowOpacity(1)
+        self.text_edit.setWindowOpacity(1)"""
 
         self.layout = QtWidgets.QVBoxLayout(self)
         self.layout.addWidget(self.text_edit)
         self.layout.addWidget(self.open_button)
         self.layout.addWidget(self.save_button)
+
 
         self.open_button.clicked.connect(self.open_file)
         self.save_button.clicked.connect(self.save_file)
@@ -127,9 +130,8 @@ class TextEditor(QtWidgets.QWidget):
 
 class Search_Widget(QtWidgets.QWidget):
     def __init__(self, parent):
-        super().__init__()
-        self.Dialog = parent
-        self.widget = QtWidgets.QWidget(parent=self.Dialog)
+        super().__init__(parent=parent)
+        self.widget = QtWidgets.QWidget(parent=parent)
         screen = QtWidgets.QApplication.primaryScreen().availableGeometry()
         self.widget.setGeometry(QtCore.QRect(0, 0, screen.width(), screen.height()))
         self.widget.setObjectName("widget")
@@ -141,6 +143,7 @@ class Search_Widget(QtWidgets.QWidget):
         profile = QtWebEngineCore.QWebEngineProfile.defaultProfile()
         page = QtWebEngineCore.QWebEnginePage(profile, parent=self.widget)
         self.webview = QtWebEngineWidgets.QWebEngineView(self.widget)
+
 
 
 
@@ -159,36 +162,61 @@ class Search_Widget(QtWidgets.QWidget):
         self.lineEdit.setUrlWidget(self.webview)
 
 
+
 class Ui_Dialog(object):
     def setupUi(self, Dialog:QtWidgets.QDialog):
+        self.shown_screen = 0
         self.show = False
         self.Dialog = Dialog
         screen = QtWidgets.QApplication.primaryScreen().availableGeometry()
         self.Dialog.setObjectName("Dialog")
         self.Dialog.resize(screen.width(), screen.height())
+        self.Dialog.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.browser = Search_Widget(self.Dialog)
+        self.notes = TextEditor(self.Dialog)
+        self.notes.setGeometry(QtCore.QRect(screen.width() // 3, screen.height() // 3, screen.width() // 3,
+                         screen.height() // 3))
+        self.browser.setGeometry(QtCore.QRect(0, 0, screen.width(), screen.height()))
 
-        self.Dialog.setStyleSheet("background: transparent;")
-        # self.Dialog.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-        self.Dialog.setWindowOpacity(0.5)  # Set the opacity to 50%
+        """self.notes.open_button.setStyleSheet("background: white;")
+        self.notes.save_button.setStyleSheet("background: white;")
+        self.notes.text_edit.setStyleSheet("background: white;")"""
+
+
+
+
+        self.widgets = [self.browser, self.notes]
+
+         # Set the opacity to 50%
 
         self.retranslateUi(self.Dialog)
         QtCore.QMetaObject.connectSlotsByName(self.Dialog)
+        self.browser.show()
+        self.notes.show()
+        self.Dialog.show()
+        self.Dialog.hide()
+
+
+        #keyboard.add_hotkey("esc", self.on_shortcut_activated)
 
 
     def on_shortcut_activated(self):
         self.show = not self.show
         if self.show:
-            self.Dialog.show()
+            print("showing")
+            self.notes.hide()
+            self.browser.show()
             self.Dialog.showFullScreen()
-            self.Dialog.setFocus()
             self.Dialog.activateWindow()
         else:
             self.Dialog.hide()
+            self.browser.hide()
+            self.notes.hide()
 
 
     def check_keyboard_queue(self, show):
-        print(" I see " + str(show.value))
         if show.value:
+            print(" I see " + str(show.value))
             self.on_shortcut_activated()
             show.value = False
 
