@@ -16,25 +16,26 @@ import pynput.keyboard as kb
 import sys
 import multiprocessing
 import time
+import os
+import copy
 
-show = multiprocessing.Value('b', False)
+show = multiprocessing.Value('i', 0)
+default_file = r"C:\Users\Maxed\PycharmProjects\QuickBrowse\QuickBrowse\note.txt"
 
 
 
 
 def on_press(show, key):
-    if str(key) == "<187>":
+    if str(key) == '<49>':
         with show.get_lock():
-            show.value = True
+            show.value = 1
+    elif str(key) == "key.esc":
+        show.value = 2
 
 def switch(show):
     with kb.Listener(on_press=lambda k: on_press(show, k)) as listener:
         listener.join()
-        print("Listening")
 
-
-
-    print("Switching")
 
 
 def start_worker(show):
@@ -52,93 +53,212 @@ def monitor_worker(show):
 def on_text_input(text):
     print(text)
 
-class KeyPressEvent(QtCore.QObject):
-    def __init__(self, widget):
-        super(KeyPressEvent, self).__init__(QtCore.QObject())
-        self.widget = widget
-
-    def keyPressEvent(self, event):
-        if event.key() == QtCore.Qt.Key.Key_Escape:
-            print("Escape")
-            self.close()
-            self.widget.show = False
-
-    def close(self):
-        self.widget.showMinimized()
 
 class MyLineEdit(QtWidgets.QLineEdit):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, function=None):
         super(MyLineEdit, self).__init__(parent)
-        self.hide()
+        self.function = function
+        self.parent_thing = parent
 
     def setUrlWidget(self, widget):
         self.urlWidget = widget
 
+    def setButton(self, button):
+        self.button = button
+
     def _setUrl(self, url):
-        self.urlWidget.load(QUrl("https://www.google.com/search?q=" + url.replace(" ", "+")))
+        self.urlWidget.load(QUrl(self.function(url)))
 
     def keyPressEvent(self, event):
         if event.key() == QtCore.Qt.Key.Key_Return or event.key() == QtCore.Qt.Key.Key_Enter:
             self._setUrl(self.text())
+            self.button.show()
+            self.setStyleSheet("""
+                        border-top-left-radius: 10%;
+                        border-top-right-radius: 10%;
+                        border-bottom-right-radius: 0px;
+                        border-bottom-left-radius: 0px;
+                        border-bottom: 3px solid grey;
+                    """)
             self.urlWidget.show()
-        super(MyLineEdit, self).keyPressEvent(event)
+            self.activateWindow()
+            event.accept()
+        elif event.key() == QtCore.Qt.Key.Key_Escape:
+            with show.get_lock():
+                show.value = 2
+            event.accept()
+        else:
+            super(MyLineEdit, self).keyPressEvent(event)
 
 class Dialog(QtWidgets.QDialog):
     def __init__(self):
         super(Dialog, self).__init__()
         self.ui = Ui_Dialog()
         self.ui.setupUi(self)
-        self.KeyPress = KeyPressEvent(self)
+    def keyPressEvent(self, event):
+        if not event.key() == QtCore.Qt.Key.Key_Escape:
+            super(Dialog).keyPressEvent(event)
+        else:
+
+            event.accept()
+
+class button(QtWidgets.QPushButton):
+    def __init__(self, text, parent):
+        super().__init__(text, parent=parent)
 
     def keyPressEvent(self, event):
-        self.KeyPress.keyPressEvent(event)
+        if event.key() == QtCore.Qt.Key.Key_Escape:
+            event.accept()
+        elif not (event.key() == QtCore.Qt.Key.Key_Return or event.key() == QtCore.Qt.Key.Key_Enter):
+            super(button).keyPressEvent(event)
 
-class TextEditor(QtWidgets.QWidget):
+class textedit(QtWidgets.QTextEdit):
     def __init__(self, parent):
         super().__init__(parent=parent)
 
-        screen = QtWidgets.QApplication.primaryScreen().availableGeometry()
+    def keyPressEvent(self, event):
+        if event.key() == QtCore.Qt.Key.Key_Escape:
+            with show.get_lock():
+                show.value = 2
+            event.accept()
+        elif event.modifiers():
+            event.accept()
+        else:
+            super(textedit).keyPressEvent(event)
 
+
+class TextEditor(QtWidgets.QWidget):
+    """
+    This class is a simple text editor that allows you to open and save files. It will be the basis for the text editor which is not yet implemented.
+    """
+    def __init__(self, parent):
+        self.file = default_file
+        super().__init__(parent=parent)
+
+        self.header_label = QtWidgets.QLabel(self)
+
+        # Set the text for the label
+        self.header_label.setText("Notepad")
+
+        # Set the font size and weight for the label
+        font = QtGui.QFont()
+        font.setPointSize(parent.height()//100)  # Set the font size
+        font.setBold(True)  # Set the font weight
+        self.header_label.setFont(font)
+
+        # Set the alignment for the label
+        self.header_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.header_label.setGeometry(QtCore.QRect(0, 0, parent.width() // 3, parent.height() // 40))
+        self.header_label.setStyleSheet("background: white;"
+                                       "border-top-left-radius: 10%;"
+                                        "border-top-right-radius: 10%;"
+                                       "border-bottom: 2px solid grey;")
 
         self.text_edit = QtWidgets.QTextEdit(self)
-        self.open_button = QtWidgets.QPushButton('Open', self)
-        self.save_button = QtWidgets.QPushButton('Save', self)
-        """self.open_button.setWindowOpacity(1)
-        self.save_button.setWindowOpacity(1)
-        self.text_edit.setWindowOpacity(1)"""
+        self.text_edit.setStyleSheet("border-radius: 10%;")
 
-        self.layout = QtWidgets.QVBoxLayout(self)
-        self.layout.addWidget(self.text_edit)
-        self.layout.addWidget(self.open_button)
-        self.layout.addWidget(self.save_button)
+        if self.file and self.file.endswith('.txt') and os.path.exists(self.file):
+            with open(self.file, 'r') as file:
+                self.text_edit.setText(file.read())
+
+        self.open_button = button('Open', self)
+        self.save_button = button('Save', self)
+
+        self.open_button.setGeometry(QtCore.QRect(0, parent.height()//3, parent.width() // 6+1, parent.height() // 40))
+        self.save_button.setGeometry(QtCore.QRect(parent.width() // 6+1, parent.height() // 3, parent.width() // 6, parent.height() // 40))
+        self.text_edit.setGeometry(QtCore.QRect(0, parent.height() // 40, parent.width() // 3, parent.height() // 3 - parent.height() // 40))
+
+        self.open_button.setStyleSheet("background: white;"
+                                       "border-bottom-left-radius: 10%;"
+                                       "border-top: 3px solid grey;"
+                                       "border-right: 1.5px solid grey;")
+        self.save_button.setStyleSheet("background: white;"
+                                       "border-bottom-right-radius: 10%;"
+                                       "border-top: 3px solid grey;"
+                                       "border-left: 1.5px solid grey;")
 
 
         self.open_button.clicked.connect(self.open_file)
         self.save_button.clicked.connect(self.save_file)
 
+    def keyPressEvent(self, event):
+        if event.key() == QtCore.Qt.Key.Key_Escape:
+            with show.get_lock():
+                show.value = 2
+
+            event.accept()
+        elif event.modifiers():
+            event.accept()
+        else:
+            super(TextEditor).keyPressEvent(event)
+
     def open_file(self):
-        file_name, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'Open File', '', 'Text Files (*.txt);;All Files (*)')
+        file_name, module = QtWidgets.QFileDialog.getOpenFileName(self, 'Open File', '', 'Text Files (*.txt);;All Files (*)')
         if file_name:
             with open(file_name, 'r') as file:
                 self.text_edit.setText(file.read())
+
+        self.text_edit.moveCursor(QtGui.QTextCursor.MoveOperation.End)
+        self.text_edit.setFocus()
+        return
 
     def save_file(self):
         file_name, _ = QtWidgets.QFileDialog.getSaveFileName(self, 'Save File', '', 'Text Files (*.txt);;All Files (*)')
         if file_name:
             with open(file_name, 'w') as file:
                 file.write(self.text_edit.toPlainText())
+        self.text_edit.setFocus()
+        return
+
+    def setGeometry(self, a0):
+        self.open_button.setGeometry(QtCore.QRect(0, a0.height()//3, a0.width() // 6+1, a0.height() // 40))
+        self.save_button.setGeometry(QtCore.QRect(a0.width() // 6+1, a0.height() // 3, a0.width() // 6, a0.height() // 40))
+        self.text_edit.setGeometry(QtCore.QRect(0, a0.height() // 40, a0.width() // 3, a0.height() // 3 - a0.height() // 40))
+        self.header_label.setGeometry(QtCore.QRect(0, 0, a0.width() // 3, a0.height() // 40))
+        font = QtGui.QFont()
+        font.setPointSize(a0.height() // 100)  # Set the font size
+        font.setBold(True)  # Set the font weight
+        self.header_label.setFont(font)
+        super().setGeometry(a0)
 
 class Search_Widget(QtWidgets.QWidget):
-    def __init__(self, parent):
+    def __init__(self, parent, function):
+        self.parent = parent
         super().__init__(parent=parent)
         self.widget = QtWidgets.QWidget(parent=parent)
-        screen = QtWidgets.QApplication.primaryScreen().availableGeometry()
-        self.widget.setGeometry(QtCore.QRect(0, 0, screen.width(), screen.height()))
+        self.widget.setGeometry(QtCore.QRect(0, 0, parent.width(), parent.height()))
         self.widget.setObjectName("widget")
-        self.lineEdit = MyLineEdit(parent=self.widget)
+
+        self.open_in_browser_button = button('Open in Browser', self.widget)
+        self.open_in_browser_button.clicked.connect(self.open_in_browser)
+        self.open_in_browser_button.hide()
+        self.open_in_browser_button.setObjectName("open_in_browser_button")
+        self.open_in_browser_button.setAutoFillBackground(True)
+
+        self.lineEdit = MyLineEdit(parent=self.widget, function=function)
+        self.lineEdit.setPlaceholderText("Search...")
         self.lineEdit.setGeometry(
-            QtCore.QRect(self.widget.width() // 3, self.widget.height() // 3 - self.widget.height() // 10,
-                         self.widget.width() // 3, self.widget.height() // 10))
+            QtCore.QRect(3 * self.widget.width() // 24, self.widget.height() // 3 - self.widget.height() // 20,
+                         self.widget.width() // 3, self.widget.height() // 20))
+
+        self.open_in_browser_button.setGeometry(
+            QtCore.QRect(3 * self.widget.width() // 24, 2 * self.widget.height() // 3,
+                         self.widget.width() // 3, self.widget.height() // 20))
+
+        self.open_in_browser_button.setStyleSheet("""
+                        border-top-left-radius: 0%;
+                        border-top-right-radius: 0%;
+                        border-bottom-right-radius: 10px;
+                        border-bottom-left-radius: 10px;
+                        border-top: 3px solid grey;
+                        background-color: white;
+                    """)
+        self.open_in_browser_button.setFont(QtGui.QFont("Arial", self.widget.height()//70))
+
+        self.lineEdit.setStyleSheet("""border-radius: 10%;
+        """)
+        self.lineEdit.setFont(QtGui.QFont("Arial", self.widget.height()//50))
+
         self.lineEdit.setObjectName("lineEdit")
         profile = QtWebEngineCore.QWebEngineProfile.defaultProfile()
         page = QtWebEngineCore.QWebEnginePage(profile, parent=self.widget)
@@ -153,49 +273,97 @@ class Search_Widget(QtWidgets.QWidget):
 
         self.webview.setPage(page)
         self.webview.setGeometry(
-            QtCore.QRect(self.widget.width() // 3, self.widget.height() // 3, self.widget.width() // 3,
+            QtCore.QRect(3 * self.widget.width() // 24, self.widget.height() // 3, self.widget.width() // 3,
                          self.widget.height() // 3))
         self.webview.load(QUrl("http://bing.com/"))
+        self.webview.setObjectName("webview")
+
         self.webview.hide()
         # Dialog.setCentralWidget(self.webview)
 
         self.lineEdit.setUrlWidget(self.webview)
+        # Add a button to open the current URL in a browser
+
+        self.lineEdit.setButton(self.open_in_browser_button)
+
+    def open_in_browser(self):
+        # Open the current URL in the default web browser
+        if self.open_in_browser_button.underMouse():
+            QtGui.QDesktopServices.openUrl(self.webview.url())
+
+    def hide(self):
+        super().hide()
+        self.widget.hide()
+        self.webview.hide()
+        self.lineEdit.hide()
+        self.open_in_browser_button.hide()
+
+
+
+
+    def show(self):
+
+
+        self.lineEdit.setStyleSheet("""border-radius: 10%;""")
+        self.lineEdit.show()
+        self.widget.show()
+        super().show()
+
+    def keyPressEvent(self, event):
+        if not event.key() == QtCore.Qt.Key.Key_Escape:
+            super(Search_Widget).keyPressEvent(event)
+        else:
+            with show.get_lock():
+                show.value = 2
+            event.accept()
+
+    def setGeometry(self, a0):
+        self.widget.setGeometry(a0)
+        self.open_in_browser_button.setGeometry(
+            QtCore.QRect(3 * self.widget.width() // 24, 2 * self.widget.height() // 3,
+                         self.widget.width() // 3, self.widget.height() // 20))
+        self.lineEdit.setGeometry(
+            QtCore.QRect(3 * self.widget.width() // 24, self.widget.height() // 3 - self.widget.height() // 20,
+                         self.widget.width() // 3, self.widget.height() // 20))
+        self.webview.setGeometry(
+            QtCore.QRect(3 * self.widget.width() // 24, self.widget.height() // 3, self.widget.width() // 3,
+                         self.widget.height() // 3))
+
+        self.lineEdit.setFont(QtGui.QFont("Arial", self.widget.height()//50))
+
+        super().setGeometry(a0)
 
 
 
 class Ui_Dialog(object):
     def setupUi(self, Dialog:QtWidgets.QDialog):
-        self.shown_screen = 0
         self.show = False
         self.Dialog = Dialog
-        screen = QtWidgets.QApplication.primaryScreen().availableGeometry()
+        self.screen = QtWidgets.QApplication.screenAt(QtGui.QCursor.pos()).availableGeometry()
+
         self.Dialog.setObjectName("Dialog")
-        self.Dialog.resize(screen.width(), screen.height())
+        self.Dialog.resize(self.screen.width(), self.screen.height())
         self.Dialog.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.browser = Search_Widget(self.Dialog)
+        self.browser = Search_Widget(self.Dialog, lambda x: "http://bing.com/search?q=" + x.replace(" ", "+"))
         self.notes = TextEditor(self.Dialog)
-        self.notes.setGeometry(QtCore.QRect(screen.width() // 3, screen.height() // 3, screen.width() // 3,
-                         screen.height() // 3))
-        self.browser.setGeometry(QtCore.QRect(0, 0, screen.width(), screen.height()))
-
-        """self.notes.open_button.setStyleSheet("background: white;")
-        self.notes.save_button.setStyleSheet("background: white;")
-        self.notes.text_edit.setStyleSheet("background: white;")"""
-
-
-
-
-        self.widgets = [self.browser, self.notes]
+        self.notes.setGeometry(QtCore.QRect(13 * self.screen.width() // 24, self.screen.height() // 3 - self.screen.height() // 20, self.screen.width(),
+                         self.screen.height()))
+        self.browser.setGeometry(QtCore.QRect(0, 0, self.screen.width(), self.screen.height()))
 
          # Set the opacity to 50%
 
         self.retranslateUi(self.Dialog)
         QtCore.QMetaObject.connectSlotsByName(self.Dialog)
-        self.browser.show()
-        self.notes.show()
         self.Dialog.show()
         self.Dialog.hide()
+        self.browser.hide()
+        self.notes.hide()
 
+    def keyPressEvent(self, event):
+        if not event.key() == QtCore.Qt.Key.Key_Escape:
+            super(Ui_Dialog).keyPressEvent(event)
+        else:
+            event.accept()
 
         #keyboard.add_hotkey("esc", self.on_shortcut_activated)
 
@@ -203,11 +371,26 @@ class Ui_Dialog(object):
     def on_shortcut_activated(self):
         self.show = not self.show
         if self.show:
-            print("showing")
-            self.notes.hide()
+            if self.screen != QtWidgets.QApplication.screenAt(QtGui.QCursor.pos()).availableGeometry():
+                self.screen = QtWidgets.QApplication.screenAt(QtGui.QCursor.pos()).availableGeometry()
+                self.Dialog.setGeometry(self.screen)
+                self.browser.setGeometry(QtCore.QRect(0, 0, self.screen.width(), self.screen.height()))
+                self.notes.setGeometry(
+                    QtCore.QRect(13 * self.screen.width() // 24, self.screen.height() // 3 - self.screen.height() // 20,
+                                 self.screen.width(),
+                                 self.screen.height()))
+
+                self.retranslateUi(self.Dialog)
+                self.Dialog.show()
+                self.Dialog.hide()
+                self.browser.hide()
+                self.notes.hide()
+
             self.browser.show()
+            self.notes.show()
             self.Dialog.showFullScreen()
             self.Dialog.activateWindow()
+            self.Dialog.setFocus()
         else:
             self.Dialog.hide()
             self.browser.hide()
@@ -215,10 +398,12 @@ class Ui_Dialog(object):
 
 
     def check_keyboard_queue(self, show):
-        if show.value:
-            print(" I see " + str(show.value))
+        if show.value == 1:
             self.on_shortcut_activated()
-            show.value = False
+            show.value = 0
+        elif show.value == 2 and self.show:
+            self.on_shortcut_activated()
+            show.value = 0
 
     def retranslateUi(self, Dialog):
         _translate = QtCore.QCoreApplication.translate
