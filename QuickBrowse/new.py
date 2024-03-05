@@ -7,19 +7,16 @@
 
 
 from PyQt6 import QtCore, QtWidgets, QtWebEngineWidgets, QtWebEngineCore
-from PyQt6.QtCore import QUrl, QCoreApplication
-from time import sleep
-from PyQt6.QtGui import QKeySequence, QShortcut
+from PyQt6.QtCore import QUrl
+
 import PyQt6.QtGui as QtGui
-import keyboard
 import pynput.keyboard as kb
 import sys
 import multiprocessing
 import time
 import os
-import copy
 
-show = multiprocessing.Value('i', 0)
+
 default_file = r"C:\Users\Maxed\PycharmProjects\QuickBrowse\QuickBrowse\note.txt"
 
 
@@ -55,8 +52,10 @@ def on_text_input(text):
 
 
 class MyLineEdit(QtWidgets.QLineEdit):
-    def __init__(self, parent=None, function=None):
+    def __init__(self, parent=None, function=None, textColor=None, backgroundColor=None):
         super(MyLineEdit, self).__init__(parent)
+        self.textColor = textColor
+        self.backgroundColor = backgroundColor
         self.function = function
         self.parent_thing = parent
 
@@ -73,12 +72,15 @@ class MyLineEdit(QtWidgets.QLineEdit):
         if event.key() == QtCore.Qt.Key.Key_Return or event.key() == QtCore.Qt.Key.Key_Enter:
             self._setUrl(self.text())
             self.button.show()
-            self.setStyleSheet("""
+            self.setStyleSheet(f"""
+                        border: 1px solid grey;
                         border-top-left-radius: 10%;
                         border-top-right-radius: 10%;
                         border-bottom-right-radius: 0px;
                         border-bottom-left-radius: 0px;
                         border-bottom: 3px solid grey;
+                        background-color: {self.backgroundColor.name()};
+                        color: {self.textColor.name()};
                     """)
             self.urlWidget.show()
             self.activateWindow()
@@ -131,7 +133,9 @@ class TextEditor(QtWidgets.QWidget):
     """
     This class is a simple text editor that allows you to open and save files. It will be the basis for the text editor which is not yet implemented.
     """
-    def __init__(self, parent):
+    def __init__(self, parent, textColor, backgroundColor):
+        self.textColor = textColor
+        self.backgroundColor = backgroundColor
         self.file = default_file
         super().__init__(parent=parent)
 
@@ -150,12 +154,17 @@ class TextEditor(QtWidgets.QWidget):
         self.header_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.header_label.setGeometry(QtCore.QRect(0, 0, parent.width() // 3, parent.height() // 40))
         self.header_label.setStyleSheet("background: white;"
+                                        "border: 1px solid grey;"
                                        "border-top-left-radius: 10%;"
                                         "border-top-right-radius: 10%;"
-                                       "border-bottom: 2px solid grey;")
+                                       "border-bottom: 2px solid grey;"f"background-color: {self.backgroundColor.name()};"
+                                       f"color: {self.textColor.name()};")
 
         self.text_edit = QtWidgets.QTextEdit(self)
-        self.text_edit.setStyleSheet("border-radius: 10%;")
+        self.text_edit.setStyleSheet(f"background-color: {self.backgroundColor.name()};"
+                                     f"color: {self.textColor.name()};"
+                                     "border: 1px solid grey;"
+                                     )
 
         if self.file and self.file.endswith('.txt') and os.path.exists(self.file):
             with open(self.file, 'r') as file:
@@ -169,13 +178,20 @@ class TextEditor(QtWidgets.QWidget):
         self.text_edit.setGeometry(QtCore.QRect(0, parent.height() // 40, parent.width() // 3, parent.height() // 3 - parent.height() // 40))
 
         self.open_button.setStyleSheet("background: white;"
+                                       "border: 1px solid grey;"
                                        "border-bottom-left-radius: 10%;"
-                                       "border-top: 3px solid grey;"
-                                       "border-right: 1.5px solid grey;")
+                                       "border-top: 2px solid grey;"
+                                       "border-right: 1px solid grey;"
+                                       f"background-color: {self.backgroundColor.name()};"
+                                       f"color: {self.textColor.name()};"
+                                       )
         self.save_button.setStyleSheet("background: white;"
+                                       "border: 1px solid grey;"
                                        "border-bottom-right-radius: 10%;"
                                        "border-top: 3px solid grey;"
-                                       "border-left: 1.5px solid grey;")
+                                       "border-left: 1px solid grey;"
+                                       f"background-color: {self.backgroundColor.name()};"
+                                       f"color: {self.textColor.name()};")
 
 
         self.open_button.clicked.connect(self.open_file)
@@ -222,8 +238,10 @@ class TextEditor(QtWidgets.QWidget):
         super().setGeometry(a0)
 
 class Search_Widget(QtWidgets.QWidget):
-    def __init__(self, parent, function):
+    def __init__(self, parent, function, textColor, backgroundColor):
         self.parent = parent
+        self.textColor = textColor
+        self.backgroundColor = backgroundColor
         super().__init__(parent=parent)
         self.widget = QtWidgets.QWidget(parent=parent)
         self.widget.setGeometry(QtCore.QRect(0, 0, parent.width(), parent.height()))
@@ -235,7 +253,7 @@ class Search_Widget(QtWidgets.QWidget):
         self.open_in_browser_button.setObjectName("open_in_browser_button")
         self.open_in_browser_button.setAutoFillBackground(True)
 
-        self.lineEdit = MyLineEdit(parent=self.widget, function=function)
+        self.lineEdit = MyLineEdit(parent=self.widget, function=function, textColor=self.textColor, backgroundColor=self.backgroundColor)
         self.lineEdit.setPlaceholderText("Search...")
         self.lineEdit.setGeometry(
             QtCore.QRect(3 * self.widget.width() // 24, self.widget.height() // 3 - self.widget.height() // 20,
@@ -245,18 +263,22 @@ class Search_Widget(QtWidgets.QWidget):
             QtCore.QRect(3 * self.widget.width() // 24, 2 * self.widget.height() // 3,
                          self.widget.width() // 3, self.widget.height() // 20))
 
-        self.open_in_browser_button.setStyleSheet("""
+        self.open_in_browser_button.setStyleSheet(f"""
                         border-top-left-radius: 0%;
                         border-top-right-radius: 0%;
                         border-bottom-right-radius: 10px;
                         border-bottom-left-radius: 10px;
+                        border: 1px solid grey;
                         border-top: 3px solid grey;
-                        background-color: white;
+                        background-color: {backgroundColor.name()};
+                        color: {textColor.name()};
                     """)
         self.open_in_browser_button.setFont(QtGui.QFont("Arial", self.widget.height()//70))
 
-        self.lineEdit.setStyleSheet("""border-radius: 10%;
-        """)
+        self.lineEdit.setStyleSheet(f"""border-radius: 10%;
+                                    border: 1px solid grey;
+                                    background-color: {backgroundColor.name()};
+                                    color: {textColor.name()};""")
         self.lineEdit.setFont(QtGui.QFont("Arial", self.widget.height()//50))
 
         self.lineEdit.setObjectName("lineEdit")
@@ -277,6 +299,9 @@ class Search_Widget(QtWidgets.QWidget):
                          self.widget.height() // 3))
         self.webview.load(QUrl("http://bing.com/"))
         self.webview.setObjectName("webview")
+        self.webview.setStyleSheet(f"""background-color: {backgroundColor.name()};
+                                    color: {textColor.name()};
+                                    border: 1px solid grey;""")
 
         self.webview.hide()
         # Dialog.setCentralWidget(self.webview)
@@ -290,6 +315,8 @@ class Search_Widget(QtWidgets.QWidget):
         # Open the current URL in the default web browser
         if self.open_in_browser_button.underMouse():
             QtGui.QDesktopServices.openUrl(self.webview.url())
+            with show.get_lock():
+                show.value = 2
 
     def hide(self):
         super().hide()
@@ -304,7 +331,10 @@ class Search_Widget(QtWidgets.QWidget):
     def show(self):
 
 
-        self.lineEdit.setStyleSheet("""border-radius: 10%;""")
+        self.lineEdit.setStyleSheet(f"""border-radius: 10%;
+                                    border: 1px solid grey;
+                                    background-color: {self.backgroundColor.name()};
+                                    color: {self.textColor.name()};""")
         self.lineEdit.show()
         self.widget.show()
         super().show()
@@ -334,9 +364,10 @@ class Search_Widget(QtWidgets.QWidget):
         super().setGeometry(a0)
 
 
-
 class Ui_Dialog(object):
-    def setupUi(self, Dialog:QtWidgets.QDialog):
+    def setupUi(self, Dialog:QtWidgets.QDialog, textColor, backgroundColor):
+        self.textColor = textColor
+        self.backgroundColor = backgroundColor
         self.show = False
         self.Dialog = Dialog
         self.screen = QtWidgets.QApplication.screenAt(QtGui.QCursor.pos()).availableGeometry()
@@ -344,8 +375,8 @@ class Ui_Dialog(object):
         self.Dialog.setObjectName("Dialog")
         self.Dialog.resize(self.screen.width(), self.screen.height())
         self.Dialog.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.browser = Search_Widget(self.Dialog, lambda x: "http://bing.com/search?q=" + x.replace(" ", "+"))
-        self.notes = TextEditor(self.Dialog)
+        self.browser = Search_Widget(self.Dialog, lambda x: "http://bing.com/search?q=" + x.replace(" ", "+"), self.textColor, self.backgroundColor)
+        self.notes = TextEditor(self.Dialog, self.textColor, self.backgroundColor)
         self.notes.setGeometry(QtCore.QRect(13 * self.screen.width() // 24, self.screen.height() // 3 - self.screen.height() // 20, self.screen.width(),
                          self.screen.height()))
         self.browser.setGeometry(QtCore.QRect(0, 0, self.screen.width(), self.screen.height()))
@@ -358,6 +389,7 @@ class Ui_Dialog(object):
         self.Dialog.hide()
         self.browser.hide()
         self.notes.hide()
+        self.Dialog.setWindowFlags(self.Dialog.windowFlags() | QtCore.Qt.WindowType.WindowStaysOnTopHint)
 
     def keyPressEvent(self, event):
         if not event.key() == QtCore.Qt.Key.Key_Escape:
@@ -407,14 +439,22 @@ class Ui_Dialog(object):
 
     def retranslateUi(self, Dialog):
         _translate = QtCore.QCoreApplication.translate
-        Dialog.setWindowTitle(_translate("Dialog", "Dialog"))
+        Dialog.setWindowTitle(_translate("Quick Browse", "Quick Browse"))
 
 
-if __name__ == "__main__":
+def main():
+    global show
+    show = multiprocessing.Value('i', 0)
     app = QtWidgets.QApplication(sys.argv)
     Dialog = QtWidgets.QDialog()
     ui = Ui_Dialog()
-    ui.setupUi(Dialog)
+
+    textColor = QtGui.QColor(255, 255, 255)
+    backgroundColor = QtGui.QColor(50, 50, 50)
+
+    ui.setupUi(Dialog, textColor, backgroundColor)
+
+
 
     keyboard_process = multiprocessing.Process(target=monitor_worker, args=(show,))
 
@@ -426,4 +466,7 @@ if __name__ == "__main__":
     timer.start(100)
 
     sys.exit(app.exec())
+
+if __name__ == "__main__":
+    main()
 
