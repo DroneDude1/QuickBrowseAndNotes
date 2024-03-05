@@ -16,18 +16,14 @@ import multiprocessing
 import time
 import os
 
-
-default_file = r"C:\Users\Maxed\PycharmProjects\QuickBrowse\QuickBrowse\note.txt"
-
-
-
-
 def on_press(show, key):
     if str(key) == '<49>':
         with show.get_lock():
             show.value = 1
     elif str(key) == "key.esc":
         show.value = 2
+
+
 
 def switch(show):
     with kb.Listener(on_press=lambda k: on_press(show, k)) as listener:
@@ -227,9 +223,9 @@ class TextEditor(QtWidgets.QWidget):
         return
 
     def setGeometry(self, a0):
-        self.open_button.setGeometry(QtCore.QRect(0, a0.height()//3, a0.width() // 6+1, a0.height() // 40))
-        self.save_button.setGeometry(QtCore.QRect(a0.width() // 6+1, a0.height() // 3, a0.width() // 6, a0.height() // 40))
-        self.text_edit.setGeometry(QtCore.QRect(0, a0.height() // 40, a0.width() // 3, a0.height() // 3 - a0.height() // 40))
+        self.open_button.setGeometry(QtCore.QRect(0, a0.height()//3 + 3*a0.height()//40, a0.width() // 6+1, a0.height() // 40))
+        self.save_button.setGeometry(QtCore.QRect(a0.width() // 6+1, a0.height() // 3 + 3*a0.height()//40, a0.width() // 6, a0.height() // 40))
+        self.text_edit.setGeometry(QtCore.QRect(0, a0.height() // 40, a0.width() // 3, a0.height() // 3 + a0.height() // 20 + 1))
         self.header_label.setGeometry(QtCore.QRect(0, 0, a0.width() // 3, a0.height() // 40))
         font = QtGui.QFont()
         font.setPointSize(a0.height() // 100)  # Set the font size
@@ -375,7 +371,7 @@ class Ui_Dialog(object):
         self.Dialog.setObjectName("Dialog")
         self.Dialog.resize(self.screen.width(), self.screen.height())
         self.Dialog.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.browser = Search_Widget(self.Dialog, lambda x: "http://bing.com/search?q=" + x.replace(" ", "+"), self.textColor, self.backgroundColor)
+        self.browser = Search_Widget(self.Dialog, lambda x: "http://bing.com/search?q=" + x.replace("+", "%2B").replace(" ", "+"), self.textColor, self.backgroundColor)
         self.notes = TextEditor(self.Dialog, self.textColor, self.backgroundColor)
         self.notes.setGeometry(QtCore.QRect(13 * self.screen.width() // 24, self.screen.height() // 3 - self.screen.height() // 20, self.screen.width(),
                          self.screen.height()))
@@ -443,8 +439,9 @@ class Ui_Dialog(object):
 
 
 def main():
-    global show
+    global show, default_file
     show = multiprocessing.Value('i', 0)
+    default_file = r"C:\Users\Maxed\PycharmProjects\QuickBrowse\QuickBrowse\note.txt"
     app = QtWidgets.QApplication(sys.argv)
     Dialog = QtWidgets.QDialog()
     ui = Ui_Dialog()
