@@ -173,6 +173,7 @@ class TextEditor(QtWidgets.QWidget):
         self.open_button = button('Open', self)
         self.save_button = button('Save', self)
 
+        self.header_label.setGeometry(QtCore.QRect(0, 0, parent.width() // 3, parent.height() // 40))
         self.open_button.setGeometry(QtCore.QRect(0, parent.height()//3, parent.width() // 6+1, parent.height() // 40))
         self.save_button.setGeometry(QtCore.QRect(parent.width() // 6+1, parent.height() // 3, parent.width() // 6, parent.height() // 40))
         self.text_edit.setGeometry(QtCore.QRect(0, parent.height() // 40, parent.width() // 3, parent.height() // 3 - parent.height() // 40))
@@ -227,14 +228,17 @@ class TextEditor(QtWidgets.QWidget):
         return
 
     def setGeometry(self, a0):
-        self.open_button.setGeometry(QtCore.QRect(0, a0.height()//3, a0.width() // 6+1, a0.height() // 40))
-        self.save_button.setGeometry(QtCore.QRect(a0.width() // 6+1, a0.height() // 3, a0.width() // 6, a0.height() // 40))
-        self.text_edit.setGeometry(QtCore.QRect(0, a0.height() // 40, a0.width() // 3, a0.height() // 3 - a0.height() // 40))
-        self.header_label.setGeometry(QtCore.QRect(0, 0, a0.width() // 3, a0.height() // 40))
+        self.open_button.setGeometry(QtCore.QRect(0, a0.height()//15 * 14, a0.width() // 2, a0.height() // 15))
+        self.save_button.setGeometry(QtCore.QRect(a0.width() // 2, a0.height()//15 * 14 -1, a0.width() // 2, a0.height() // 15 + 1))
+        self.text_edit.setGeometry(QtCore.QRect(0, a0.height() // 15, a0.width(), a0.height() // 15 * 13))
+
+        self.header_label.setGeometry(QtCore.QRect(0, 0, a0.width(), a0.height() // 15))
         font = QtGui.QFont()
-        font.setPointSize(a0.height() // 100)  # Set the font size
+        font.setPointSize(a0.height() // 30)  # Set the font size
         font.setBold(True)  # Set the font weight
         self.header_label.setFont(font)
+        self.open_button.setFont(font)
+        self.save_button.setFont(font)
         super().setGeometry(a0)
 
 class Search_Widget(QtWidgets.QWidget):
@@ -349,15 +353,16 @@ class Search_Widget(QtWidgets.QWidget):
 
     def setGeometry(self, a0):
         self.widget.setGeometry(a0)
+
         self.open_in_browser_button.setGeometry(
-            QtCore.QRect(3 * self.widget.width() // 24, 2 * self.widget.height() // 3,
-                         self.widget.width() // 3, self.widget.height() // 20))
+            QtCore.QRect(0, a0.height()//15*14,
+                         a0.width(), a0.height()//15))
         self.lineEdit.setGeometry(
-            QtCore.QRect(3 * self.widget.width() // 24, self.widget.height() // 3 - self.widget.height() // 20,
-                         self.widget.width() // 3, self.widget.height() // 20))
+            QtCore.QRect(0, 0,
+                         a0.width(), a0.height()//15))
         self.webview.setGeometry(
-            QtCore.QRect(3 * self.widget.width() // 24, self.widget.height() // 3, self.widget.width() // 3,
-                         self.widget.height() // 3))
+            QtCore.QRect(0, a0.height()//15, a0.width(),
+                         a0.height()//15*13))
 
         self.lineEdit.setFont(QtGui.QFont("Arial", self.widget.height()//50))
 
@@ -377,9 +382,11 @@ class Ui_Dialog(object):
         self.Dialog.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
         self.browser = Search_Widget(self.Dialog, lambda x: "http://bing.com/search?q=" + x.replace(" ", "+"), self.textColor, self.backgroundColor)
         self.notes = TextEditor(self.Dialog, self.textColor, self.backgroundColor)
-        self.notes.setGeometry(QtCore.QRect(13 * self.screen.width() // 24, self.screen.height() // 3 - self.screen.height() // 20, self.screen.width(),
-                         self.screen.height()))
-        self.browser.setGeometry(QtCore.QRect(0, 0, self.screen.width(), self.screen.height()))
+        self.notes.setGeometry(
+            QtCore.QRect(13 * self.screen.width() // 24, self.screen.height() // 3 - self.screen.height() // 20,
+                         self.screen.width() // 3,
+                         self.screen.height() // 2))
+        self.browser.setGeometry(QtCore.QRect(3 * self.screen.width() // 24, self.screen.height() // 3 - self.screen.height() // 20, self.screen.width()//3, self.screen.height()//2))
 
          # Set the opacity to 50%
 
@@ -409,8 +416,8 @@ class Ui_Dialog(object):
                 self.browser.setGeometry(QtCore.QRect(0, 0, self.screen.width(), self.screen.height()))
                 self.notes.setGeometry(
                     QtCore.QRect(13 * self.screen.width() // 24, self.screen.height() // 3 - self.screen.height() // 20,
-                                 self.screen.width(),
-                                 self.screen.height()))
+                                 self.screen.width()//3,
+                                 self.screen.height()//2))
 
                 self.retranslateUi(self.Dialog)
                 self.Dialog.show()
