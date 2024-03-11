@@ -17,7 +17,7 @@ default_file = r"C:\Users\Maxed\PycharmProjects\QuickBrowse\QuickBrowse\note.txt
 
 
 def on_press(show, key):
-    if str(key) == '<49>':
+    if str(key) == r"'\x15'":
         with show.get_lock():
             show.value = 1
     elif str(key) == "key.esc":
@@ -40,9 +40,6 @@ def monitor_worker(show):
         if not p.is_alive():
             p = start_worker(show)
         time.sleep(0.2)
-
-def on_text_input(text):
-    print(text)
 
 
 class MyLineEdit(QtWidgets.QLineEdit):
@@ -130,6 +127,27 @@ class button(QtWidgets.QPushButton):
             event.accept()
         elif not (event.key() == QtCore.Qt.Key.Key_Return or event.key() == QtCore.Qt.Key.Key_Enter):
             super(button).keyPressEvent(event)
+
+class link_buttons(QtWidgets.QWidget):
+    def __init__(self, parent, urls, names, textColor, backgroundColor):
+        super().__init__()
+        self.parent = parent
+        self.urls = urls
+        self.names = names
+        self.textColor = textColor
+        self.backgroundColor = backgroundColor
+        self.buttons = []
+        for i, (url, name) in enumerate(zip(self.urls, self.names)):
+            self.buttons.append(QtWidgets.QPushButton(self))
+            self.buttons[-1].clicked.connect(lambda: QtGui.QDesktopServices.openUrl(url))
+            self.buttons[-1].setStyleSheet(f"""
+                border: 1px solid grey;
+                border-radius: 10%;
+                background-color: {self.backgroundColor.name()};
+                color: {self.textColor.name()};
+            """)
+            self.buttons[-1].setGeometry(QtCore.QRect(0, self.height()//(len(urls)-1) * i, self.width(), self.height()//len(urls)))
+            self.buttons[-1].setFont(QtGui.QFont("Arial", self.height()//50))
 
 class textedit(QtWidgets.QTextEdit):
     def __init__(self, parent):
@@ -427,6 +445,7 @@ class URLWidget(QtWidgets.QWidget):
 
 class Ui_Dialog(object):
     def setupUi(self, Dialog:QtWidgets.QDialog, textColor, backgroundColor):
+
         self.textColor = textColor
         self.backgroundColor = backgroundColor
         self.show = False
@@ -436,26 +455,23 @@ class Ui_Dialog(object):
         self.Dialog.setObjectName("Dialog")
         self.Dialog.resize(self.screen.width(), self.screen.height())
         self.Dialog.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.browser = Search_Widget(self.Dialog, lambda x: "http://bing.com/search?q=" + x.replace(" ", "+"), self.textColor, self.backgroundColor)
+        self.browser = Search_Widget(self.Dialog, lambda x: "http://google.com/search?q=" + x.replace(" ", "+"), self.textColor, self.backgroundColor)
         self.notes = TextEditor(self.Dialog, self.textColor, self.backgroundColor)
         self.notes.setGeometry(
-            QtCore.QRect(13 * self.screen.width() // 24, self.screen.height() // 3 - self.screen.height() // 20,
+            QtCore.QRect(13 * self.screen.width() // 24, self.screen.height() // 4,
                          self.screen.width() // 3,
                          self.screen.height() // 2))
-        self.browser.setGeometry(QtCore.QRect(3 * self.screen.width() // 24, self.screen.height() // 3 - self.screen.height() // 20, self.screen.width()//3, self.screen.height()//2))
-
+        self.browser.setGeometry(QtCore.QRect(3 * self.screen.width() // 24, self.screen.height() // 4, self.screen.width()//3, 3 * self.screen.height()//4))
          # Set the opacity to 50%
         self.urlWidget = URLWidget(self.Dialog, self.textColor, self.backgroundColor)
         self.urlWidget.set_urls(["https://www.desmos.com/calculator", "https://www.claude.ai", "https://www.youtube.com", "https://www.stackoverflow.com"], ["Desmos", "Claude", "Youtube", "Stack\nOverflow"])
-        self.urlWidget.setGeometry(QtCore.QRect(23 * self.screen.width() // 48, self.screen.height() // 3 - self.screen.height() // 20, self.screen.width()//24, self.screen.height()//2))
+        self.urlWidget.setGeometry(QtCore.QRect(23 * self.screen.width() // 48, self.screen.height() // 4, self.screen.width()//24, self.screen.height()//2))
         self.urlWidget.setLineEdit(self.browser.lineEdit)
-
         self.retranslateUi(self.Dialog)
         QtCore.QMetaObject.connectSlotsByName(self.Dialog)
         self.Dialog.show()
         self.Dialog.hide()
-        self.browser.hide()
-        self.notes.hide()
+
         self.Dialog.setWindowFlags(self.Dialog.windowFlags() | QtCore.Qt.WindowType.WindowStaysOnTopHint)
 
     def keyPressEvent(self, event):
@@ -474,14 +490,14 @@ class Ui_Dialog(object):
                 self.screen = QtWidgets.QApplication.screenAt(QtGui.QCursor.pos()).availableGeometry()
                 self.Dialog.setGeometry(self.screen)
                 self.browser.setGeometry(
-                    QtCore.QRect(3 * self.screen.width() // 24, self.screen.height() // 3 - self.screen.height() // 20,
+                    QtCore.QRect(3 * self.screen.width() // 24, self.screen.height() // 4,
                                  self.screen.width() // 3, self.screen.height() // 2))
                 self.notes.setGeometry(
-                    QtCore.QRect(13 * self.screen.width() // 24, self.screen.height() // 3 - self.screen.height() // 20,
+                    QtCore.QRect(13 * self.screen.width() // 24, self.screen.height() // 4,
                                  self.screen.width()//3,
                                  self.screen.height()//2))
                 self.urlWidget.setGeometry(
-                    QtCore.QRect(23 * self.screen.width() // 48, self.screen.height() // 3 - self.screen.height() // 20,
+                    QtCore.QRect(23 * self.screen.width() // 48, self.screen.height() // 4,
                                  self.screen.width() // 24, self.screen.height() // 2))
 
                 self.retranslateUi(self.Dialog)
@@ -496,6 +512,7 @@ class Ui_Dialog(object):
             self.urlWidget.show()
             self.Dialog.showFullScreen()
             self.Dialog.activateWindow()
+            self.Dialog.setFocus()
             self.browser.lineEdit.setFocus()
         else:
             self.Dialog.hide()
