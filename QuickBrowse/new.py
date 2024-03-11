@@ -1,17 +1,20 @@
-
+"""
+Max Clemetsen
+"""
 
 from PyQt6 import QtCore, QtWidgets, QtWebEngineWidgets, QtWebEngineCore
 from PyQt6.QtCore import QUrl
-import requests
 import PyQt6.QtGui as QtGui
 import pynput.keyboard as kb
 import sys
 import multiprocessing
 import time
 import os
-import json
 
-default_file = r"C:\Users\Maxed\PycharmProjects\QuickBrowse\QuickBrowse\note.txt"
+default_file = r"note.txt"
+urls = ["https://www.desmos.com/calculator", "https://www.claude.ai", "https://www.youtube.com", "https://www.stackoverflow.com"]
+names = ["Desmos", "Claude", "Youtube", "Stack\nOverflow"]
+text_parsing = lambda x: "http://google.com/search?q=" + x.replace("+", "%20").replace(" ", "+")
 
 
 
@@ -61,7 +64,8 @@ class MyLineEdit(QtWidgets.QLineEdit):
 
     def keyPressEvent(self, event):
         if event.key() == QtCore.Qt.Key.Key_Return or event.key() == QtCore.Qt.Key.Key_Enter:
-            self._setUrl(self.text())
+            if self.text() != "":
+                self._setUrl(self.text())
             self.button.show()
             self.setStyleSheet(f"""
                         border: 1px solid grey;
@@ -76,7 +80,9 @@ class MyLineEdit(QtWidgets.QLineEdit):
             self.urlWidget.show()
             self.activateWindow()
             event.accept()
+            self.setText("")
         elif event.key() == QtCore.Qt.Key.Key_Escape:
+            self.setText("")
             with show.get_lock():
                 show.value = 2
             event.accept()
@@ -438,13 +444,13 @@ class URLWidget(QtWidgets.QWidget):
                 QtCore.QRect(0, a0.height() // len(self.buttons) * i + (
                             a0.height() // len(self.buttons) - a0.height() // (len(self.buttons) + 1)) // len(self.buttons) * i,
                              a0.width(), a0.height() // (len(self.buttons) + 1)))
-            button.setFont(QtGui.QFont("Arial", button.width() // len(button.text())))
+            button.setFont(QtGui.QFont("Arial", button.width() // max(len(i) for i in button.text().split("\n"))))
 
         super().setGeometry(a0)
 
 
 class Ui_Dialog(object):
-    def setupUi(self, Dialog:QtWidgets.QDialog, textColor, backgroundColor):
+    def setupUi(self, Dialog:QtWidgets.QDialog, textColor, backgroundColor, urls, names, text_parsing):
 
         self.textColor = textColor
         self.backgroundColor = backgroundColor
@@ -455,17 +461,17 @@ class Ui_Dialog(object):
         self.Dialog.setObjectName("Dialog")
         self.Dialog.resize(self.screen.width(), self.screen.height())
         self.Dialog.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.browser = Search_Widget(self.Dialog, lambda x: "http://google.com/search?q=" + x.replace(" ", "+"), self.textColor, self.backgroundColor)
+        self.browser = Search_Widget(self.Dialog, text_parsing, self.textColor, self.backgroundColor)
         self.notes = TextEditor(self.Dialog, self.textColor, self.backgroundColor)
         self.notes.setGeometry(
-            QtCore.QRect(13 * self.screen.width() // 24, self.screen.height() // 4,
+            QtCore.QRect(13 * self.screen.width() // 24, self.screen.height() // 8,
                          self.screen.width() // 3,
-                         self.screen.height() // 2))
-        self.browser.setGeometry(QtCore.QRect(3 * self.screen.width() // 24, self.screen.height() // 4, self.screen.width()//3, 3 * self.screen.height()//4))
+                         3 * self.screen.height() // 4))
+        self.browser.setGeometry(QtCore.QRect(3 * self.screen.width() // 24, self.screen.height() // 8, self.screen.width()//3, 3 * self.screen.height()//4))
          # Set the opacity to 50%
         self.urlWidget = URLWidget(self.Dialog, self.textColor, self.backgroundColor)
-        self.urlWidget.set_urls(["https://www.desmos.com/calculator", "https://www.claude.ai", "https://www.youtube.com", "https://www.stackoverflow.com"], ["Desmos", "Claude", "Youtube", "Stack\nOverflow"])
-        self.urlWidget.setGeometry(QtCore.QRect(23 * self.screen.width() // 48, self.screen.height() // 4, self.screen.width()//24, self.screen.height()//2))
+        self.urlWidget.set_urls(urls, names)
+        self.urlWidget.setGeometry(QtCore.QRect(23 * self.screen.width() // 48, self.screen.height() // 8, self.screen.width()//24, 3 * self.screen.height()//4))
         self.urlWidget.setLineEdit(self.browser.lineEdit)
         self.retranslateUi(self.Dialog)
         QtCore.QMetaObject.connectSlotsByName(self.Dialog)
@@ -490,15 +496,15 @@ class Ui_Dialog(object):
                 self.screen = QtWidgets.QApplication.screenAt(QtGui.QCursor.pos()).availableGeometry()
                 self.Dialog.setGeometry(self.screen)
                 self.browser.setGeometry(
-                    QtCore.QRect(3 * self.screen.width() // 24, self.screen.height() // 4,
-                                 self.screen.width() // 3, self.screen.height() // 2))
+                    QtCore.QRect(3 * self.screen.width() // 24, self.screen.height() // 8,
+                                 self.screen.width() // 3, 3 * self.screen.height() // 4))
                 self.notes.setGeometry(
-                    QtCore.QRect(13 * self.screen.width() // 24, self.screen.height() // 4,
+                    QtCore.QRect(13 * self.screen.width() // 24, self.screen.height() // 8,
                                  self.screen.width()//3,
-                                 self.screen.height()//2))
+                                 3 * self.screen.height()//4))
                 self.urlWidget.setGeometry(
-                    QtCore.QRect(23 * self.screen.width() // 48, self.screen.height() // 4,
-                                 self.screen.width() // 24, self.screen.height() // 2))
+                    QtCore.QRect(23 * self.screen.width() // 48, self.screen.height() // 8,
+                                 self.screen.width() // 24, 3 * self.screen.height() // 4))
 
                 self.retranslateUi(self.Dialog)
                 self.Dialog.show()
@@ -543,7 +549,7 @@ def main():
     textColor = QtGui.QColor(255, 255, 255)
     backgroundColor = QtGui.QColor(50, 50, 50)
 
-    ui.setupUi(Dialog, textColor, backgroundColor)
+    ui.setupUi(Dialog, textColor, backgroundColor, urls, names, text_parsing)
 
 
 
